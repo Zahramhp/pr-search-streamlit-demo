@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 
 def get_connected(df, pr):
-    """Find all PR-numbers in col D/L connected to the given PR."""
-    col_D = df.iloc[:, 3].astype(str)
-    col_L = df.iloc[:, 11].astype(str)
+    """Find all PR-numbers in M_NR/Z_MNR connected to the given PR."""
+    col_D = df['M_NR'].astype(str)
+    col_L = df['Z_MNR'].astype(str)
     mask_D = col_D == pr
     mask_L = col_L == pr
     connected_D = set(col_L[mask_D])
@@ -30,40 +30,40 @@ def main():
         st.info("Please upload an Excel file.")
         return
 
+    # Read sheet
     try:
         df = pd.read_excel(uploaded, sheet_name='Zwang_Ausschluss_Quelle')
     except Exception as e:
         st.error(f"Error loading sheet: {e}")
         return
 
-    df = pd.read_excel(uploaded, sheet_name='Zwang_Ausschluss_Quelle')
-    st.write("Columns detected in sheet:", df.columns.tolist())
+    # Normalize headers (strip whitespace)
+    df.columns = [c.strip() for c in df.columns]
 
-    # --- Body-type filter ---
-    if 'BTYP' not in df.columns:
-        st.error("Column `BTYP` not found in the sheet.")
+    # Confirm required columns
+    required = {'BTYP', 'M_NR', 'Z_MNR'}
+    missing = required - set(df.columns)
+    if missing:
+        st.error(f"Missing required column(s): {', '.join(missing)}")
         return
 
+    # Body-type filter
     df['BTYP'] = df['BTYP'].astype(str)
     btypes = sorted(df['BTYP'].dropna().unique())
     selected_btyp = st.selectbox("Select Body Type", btypes)
-
-    # apply filter
     df = df[df['BTYP'] == selected_btyp]
     st.write(f"Filtered to **{selected_btyp}**, {len(df)} rows remain.")
 
-    # --- PR list & searches ---
-    col_D_name, col_L_name = df.columns[3], df.columns[11]
-    st.write(f"Using columns **{col_D_name}** (D) & **{col_L_name}** (L)")
-
-    prs_D = df[col_D_name].dropna().astype(str)
-    prs_L = df[col_L_name].dropna().astype(str)
+    # Prepare PR-list
+    prs_D = df['M_NR'].dropna().astype(str)
+    prs_L = df['Z_MNR'].dropna().astype(str)
     unique_prs = sorted(set(prs_D) | set(prs_L))
 
     initial_pr = st.selectbox("Select Initial PR-Number", unique_prs)
     if not initial_pr:
         return
 
+    # Run searches
     lvl1, lvl2 = multi_level_search(df, initial_pr)
 
     st.subheader("First-Level Connections")
