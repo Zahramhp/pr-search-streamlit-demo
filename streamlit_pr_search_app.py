@@ -2,59 +2,44 @@ import streamlit as st
 import pandas as pd
 
 def get_connected(df, pr):
-    """Find all PR-numbers in M_NR/Z_MNR connected to the given PR."""
     col_D = df['M_NR'].astype(str)
     col_L = df['Z_MNR'].astype(str)
-    mask_D = col_D == pr
-    mask_L = col_L == pr
-    connected_D = set(col_L[mask_D])
-    connected_L = set(col_D[mask_L])
-    return sorted(x for x in (connected_D | connected_L) if x and x != pr)
+    return sorted(
+        x for x in set(col_L[col_D == pr]) | set(col_D[col_L == pr])
+        if x and x != pr
+    )
 
 def multi_level_search(df, initial_pr):
-    """Run first- and second-level searches."""
-    level1 = get_connected(df, initial_pr)
-    level2 = {pr1: get_connected(df, pr1) for pr1 in level1}
-    return level1, level2
+    lvl1 = get_connected(df, initial_pr)
+    lvl2 = {p: get_connected(df, p) for p in lvl1}
+    return lvl1, lvl2
 
 def main():
     st.title("PR-Number Variant Management Search")
-    st.markdown("""
-    1. Upload an Excel file with sheet `Zwang_Ausschluss_Quelle`.  
-    2. Filter by body type (column `BTYP`).  
-    3. Select an initial PR to see first- and second-level connections.
-    """)
 
-    uploaded = st.file_uploader("Choose an Excel file", type=["xlsx"])
+    uploaded = st.file_uploader("Upload Excel (sheet ‘Zwang_Ausschluss_Quelle’)", type=["xlsx"])
     if not uploaded:
         st.info("Please upload an Excel file.")
         return
 
-    # Read sheet
-    try:
-        df = pd.read_excel(uploaded, sheet_name='Zwang_Ausschluss_Quelle')
-    except Exception as e:
-        st.error(f"Error loading sheet: {e}")
-        return
-
-    # Normalize headers (strip whitespace)
+    # 1) Load & normalize
+    df = pd.read_excel(uploaded, sheet_name='Zwang_Ausschluss_Quelle')
     df.columns = [c.strip() for c in df.columns]
 
-    # Confirm required columns
-    required = {'BTYP', 'M_NR', 'Z_MNR'}
-    missing = required - set(df.columns)
-    if missing:
-        st.error(f"Missing required column(s): {', '.join(missing)}")
-        return
+    # 2) Check for required cols
+    for req in ('BTYP','M_NR','Z_MNR'):
+        if req not in df.columns:
+            st.error(f"Missing column: {req}")
+            return
 
-    # Body-type filter
+    # 3) Filter by body type
     df['BTYP'] = df['BTYP'].astype(str)
     btypes = sorted(df['BTYP'].dropna().unique())
     selected_btyp = st.selectbox("Select Body Type", btypes)
     df = df[df['BTYP'] == selected_btyp]
-    st.write(f"Filtered to **{selected_btyp}**, {len(df)} rows remain.")
+    st.write(f"Filtered to **{selected_btyp}** → {len(df)} rows")
 
-    # Prepare PR-list
+    # 4) **Build initial list only from filtered rows**
     prs_D = df['M_NR'].dropna().astype(str)
     prs_L = df['Z_MNR'].dropna().astype(str)
     unique_prs = sorted(set(prs_D) | set(prs_L))
@@ -63,7 +48,7 @@ def main():
     if not initial_pr:
         return
 
-    # Run searches
+    # 5) Run first & second level
     lvl1, lvl2 = multi_level_search(df, initial_pr)
 
     st.subheader("First-Level Connections")
@@ -71,10 +56,10 @@ def main():
 
     st.subheader("Second-Level Connections")
     if lvl2:
-        for pr1, conns in lvl2.items():
-            st.write(f"From **{pr1}** → {conns or 'None.'}")
+        for p, conns in lvl2.items():
+            st.write(f"From **{p}** → {conns or 'None.'}")
     else:
-        st.write("No second-level connections (first level was empty).")
+        st.write("No second-level connections.")
 
 if __name__ == "__main__":
     main()
