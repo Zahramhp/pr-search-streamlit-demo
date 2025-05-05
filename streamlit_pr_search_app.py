@@ -36,6 +36,9 @@ def main():
         st.error(f"Error loading sheet: {e}")
         return
 
+    df = pd.read_excel(uploaded, sheet_name='Zwang_Ausschluss_Quelle')
+    st.write("Columns detected in sheet:", df.columns.tolist())
+
     # --- Body-type filter ---
     if 'BTYP' not in df.columns:
         st.error("Column `BTYP` not found in the sheet.")
