@@ -23,10 +23,16 @@ def main():
         st.error(f"Column 'BTYP' not found. Available columns: {df.columns.tolist()}")
         return
 
-    # Convert BTYP to string and get unique values
+    # Prepare body type options with a placeholder
     df['BTYP'] = df['BTYP'].astype(str)
     body_types = sorted(df['BTYP'].unique())
-    selected_btyp = st.selectbox("Select Body Type", body_types)
+    options = ["-- select body type --"] + body_types
+    selected_btyp = st.selectbox("Select Body Type", options)
+
+    # Only filter and show after a valid selection
+    if selected_btyp == "-- select body type --":
+        st.info("Please choose a body type above to see filtered results.")
+        return
 
     # Filter by selected body type
     filtered_df = df[df['BTYP'] == selected_btyp]
