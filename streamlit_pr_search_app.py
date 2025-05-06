@@ -45,11 +45,19 @@ def main():
     prs_L = filtered_df['Z_MNR'].dropna().astype(str)
     unique_prs = sorted(set(prs_D) | set(prs_L))
 
-    # 7) Display the list of PR-numbers
-    st.subheader("Available PR-Numbers")
-    st.write(unique_prs)
+    # 7) Tabbed display for PR list and selection
+    tab_list, tab_select = st.tabs(["PR List", "Select PR"])
+    with tab_list:
+        st.subheader("Available PR-Numbers")
+        st.write(unique_prs)
+    with tab_select:
+        st.subheader("Choose an Initial PR-Number")
+        selected_pr = st.selectbox("Select PR-Number", unique_prs)
+        if selected_pr:
+            st.write(f"You selected: **{selected_pr}**")
 
-    # (Next step: allow user selection from `unique_prs` for search)
+    # Placeholder for next search steps
+    # You can add first/second level search functionality here using `selected_pr`.
 
 if __name__ == "__main__":
     main()
