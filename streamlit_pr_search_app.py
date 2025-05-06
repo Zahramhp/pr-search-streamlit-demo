@@ -1,6 +1,16 @@
 import streamlit as st
 import pandas as pd
 
+# Helper to clean PR-number strings
+
+def clean_pr(s):
+    """
+    Remove leading apostrophes and surrounding whitespace.
+    """
+    # Convert to string, remove leading apostrophes, then strip whitespace
+    return str(s).lstrip("'").strip()
+
+
 def main():
     st.title("Filter Data by Body Type and List PR-Numbers")
 
@@ -36,13 +46,18 @@ def main():
     filtered_df = df[df['BTYP'] == selected_btyp]
     st.write(f"Filtered to **{selected_btyp}**, {len(filtered_df)} rows remain.")
 
-    # 6) Build list of unique PR-numbers from M_NR and Z_MNR
+    # 6) Build and clean list of unique PR-numbers from M_NR and Z_MNR
     for col in ('M_NR', 'Z_MNR'):
         if col not in filtered_df.columns:
             st.error(f"Required column '{col}' not found.")
             return
-    prs_D = filtered_df['M_NR'].dropna().astype(str)
-    prs_L = filtered_df['Z_MNR'].dropna().astype(str)
+
+    # Extract, clean, and drop empty
+    prs_D = filtered_df['M_NR'].dropna().astype(str).map(clean_pr)
+    prs_L = filtered_df['Z_MNR'].dropna().astype(str).map(clean_pr)
+    prs_D = prs_D[prs_D != ""]
+    prs_L = prs_L[prs_L != ""]
+
     unique_prs = sorted(set(prs_D) | set(prs_L))
 
     # 7) Tabbed display for PR list and selection
@@ -57,7 +72,6 @@ def main():
             st.write(f"You selected: **{selected_pr}**")
 
     # Placeholder for next search steps
-    # You can add first/second level search functionality here using `selected_pr`.
 
 if __name__ == "__main__":
     main()
