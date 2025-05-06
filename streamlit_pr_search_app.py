@@ -7,7 +7,6 @@ def clean_pr(s):
     """
     Remove leading apostrophes and surrounding whitespace.
     """
-    # Convert to string, remove leading apostrophes, then strip whitespace
     return str(s).lstrip("'").strip()
 
 
@@ -52,12 +51,10 @@ def main():
             st.error(f"Required column '{col}' not found.")
             return
 
-    # Extract, clean, and drop empty
     prs_D = filtered_df['M_NR'].dropna().astype(str).map(clean_pr)
     prs_L = filtered_df['Z_MNR'].dropna().astype(str).map(clean_pr)
     prs_D = prs_D[prs_D != ""]
     prs_L = prs_L[prs_L != ""]
-
     unique_prs = sorted(set(prs_D) | set(prs_L))
 
     # 7) Tabbed display for PR list and selection
@@ -65,13 +62,25 @@ def main():
     with tab_list:
         st.subheader("Available PR-Numbers")
         st.write(unique_prs)
+
     with tab_select:
         st.subheader("Choose an Initial PR-Number")
         selected_pr = st.selectbox("Select PR-Number", unique_prs)
-        if selected_pr:
-            st.write(f"You selected: **{selected_pr}**")
+        if not selected_pr:
+            return
+        st.write(f"You selected: **{selected_pr}**")
 
-    # Placeholder for next search steps
+        # 8) Filtered DataFrames based on selected PR
+        # Rows where M_NR matches
+        df_mnr = filtered_df[filtered_df['M_NR'].astype(str).map(clean_pr) == selected_pr]
+        # Rows where Z_MNR matches
+        df_zmnr = filtered_df[filtered_df['Z_MNR'].astype(str).map(clean_pr) == selected_pr]
+
+        st.subheader("Filtered by M_NR")
+        st.dataframe(df_mnr)
+
+        st.subheader("Filtered by Z_MNR")
+        st.dataframe(df_zmnr)
 
 if __name__ == "__main__":
     main()
